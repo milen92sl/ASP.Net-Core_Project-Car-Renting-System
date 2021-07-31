@@ -10,19 +10,16 @@
     {
         private readonly ICarService cars;
 
-        public CarsApiController(ICarService cars) => this.cars = cars;
-
-        //  [Route("details")] ==> /api/cars/details
+        public CarsApiController(ICarService cars) 
+            => this.cars = cars;
 
         [HttpGet]
-        public CarQueryServiceModel All([FromQuery] AllCarsApiRequestModel query)
-        {
-            return cars.All(
+        public CarQueryServiceModel All([FromQuery] AllCarsApiRequestModel query) 
+            => this.cars.All(
                 query.Brand,
                 query.SearchTerm,
                 query.Sorting,
                 query.CurrentPage,
                 query.CarsPerPage);
-        }
     }
 }

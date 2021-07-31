@@ -1,9 +1,7 @@
 ﻿namespace CarRentingSystem.Controllers
 {
-    using System.Diagnostics;
     using System.Linq;
     using CarRentingSystem.Data;
-    using CarRentingSystem.Models;
     using CarRentingSystem.Models.Home;
     using CarRentingSystem.Services.Statistics;
     using Microsoft.AspNetCore.Mvc;
@@ -23,9 +21,6 @@
 
         public IActionResult Index()
         {
-            var totalCars = this.data.Cars.Count();
-            var totalUsers = this.data.Users.Count();
-
             var cars = this.data
                 .Cars
                 .OrderByDescending(c => c.Id)
@@ -50,7 +45,6 @@
             });
         }
 
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error() => View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        public IActionResult Error() => View();
     }
 }

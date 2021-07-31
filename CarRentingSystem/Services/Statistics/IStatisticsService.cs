@@ -2,6 +2,6 @@
 {
     public interface IStatisticsService
     {
-       public StatisticsServiceModel Total();
+        StatisticsServiceModel Total();
     }
 }
