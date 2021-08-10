@@ -1,5 +1,7 @@
 ﻿@using CarRentingSystem.Data.Models
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authentication.Facebook
+
 
 @inject SignInManager<User> SignInManager
 @inject UserManager<User> UserManager
@@ -24,6 +26,12 @@
                 <a class="nav-link text-dark" asp-area="" asp-controller="Dealers" asp-action="Become">Become Dealer</a>
             </li>
         }
+        else if (userIsAdmin)
+        {
+            <li class="nav-item">
+                <a class="nav-link text-dark" asp-area="Admin" asp-controller="Cars" asp-action="All">Administration</a>
+            </li>
+        }
         <li class="nav-item">
             <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Manage/Index" title="Manage">Account</a>
         </li>
@@ -37,7 +45,7 @@
     {
         <li class="nav-item">
             <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Register">Register</a>
-        </li>
+        </li>  
         <li class="nav-item">
             <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Login</a>
         </li>

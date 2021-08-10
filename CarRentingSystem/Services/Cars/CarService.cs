@@ -2,25 +2,34 @@
 {
     using System.Collections.Generic;
     using System.Linq;
+    using AutoMapper;
+    using AutoMapper.QueryableExtensions;
     using CarRentingSystem.Data;
     using CarRentingSystem.Data.Models;
     using CarRentingSystem.Models;
+    using CarRentingSystem.Services.Cars.Models; 
 
     public class CarService : ICarService
     {
         private readonly CarRentingDbContext data;
+        private readonly IConfigurationProvider mapper;
 
-        public CarService(CarRentingDbContext data) 
-            => this.data = data;
+        public CarService(CarRentingDbContext data, IMapper mapper) 
+		{
+			this.data = data;
+			this.mapper = mapper.ConfigurationProvider;
+		}
 
         public CarQueryServiceModel All(
-            string brand,
-            string searchTerm,
-            CarSorting sorting,
-            int currentPage,
-            int carsPerPage)
+            string brand = null,
+            string searchTerm = null,
+            CarSorting sorting = CarSorting.DateCreated,
+            int currentPage = 1,
+            int carsPerPage = int.MaxValue,
+            bool publicOnly = true)
         {
-            var carsQuery = this.data.Cars.AsQueryable();
+            var carsQuery = this.data.Cars
+                .Where(c => !publicOnly || c.IsPublic);
 
             if (!string.IsNullOrWhiteSpace(brand))
             {
@@ -56,23 +65,20 @@
             };
         }
 
+        public IEnumerable<LatestCarServiceModel> Latest()
+            => this.data
+                .Cars
+                .Where(c => c.IsPublic)
+                .OrderByDescending(c => c.Id)
+                .ProjectTo<LatestCarServiceModel>(this.mapper)
+                .Take(3)
+                .ToList();
+
         public CarDetailsServiceModel Details(int id)
             => this.data
                 .Cars
                 .Where(c => c.Id == id)
-                .Select(c => new CarDetailsServiceModel
-                {
-                    Id = c.Id,
-                    Brand = c.Brand,
-                    Model = c.Model,
-                    Description = c.Description,
-                    Year = c.Year,
-                    ImageUrl = c.ImageUrl,
-                    CategoryName = c.Category.Name,
-                    DealerId = c.DealerId,
-                    DealerName = c.Dealer.Name,
-                    UserId = c.Dealer.UserId
-                })
+                .ProjectTo<CarDetailsServiceModel>(this.mapper)
                 .FirstOrDefault();
 
         public int Create(string brand, string model, string description, string imageUrl, int year, int categoryId, int dealerId)
@@ -85,7 +91,8 @@
                 ImageUrl = imageUrl,
                 Year = year,
                 CategoryId = categoryId,
-                DealerId = dealerId
+                DealerId = dealerId,
+                IsPublic = false
             };
 
             this.data.Cars.Add(carData);
@@ -94,7 +101,15 @@
             return carData.Id;
         }
 
-        public bool Edit(int id, string brand, string model, string description, string imageUrl, int year, int categoryId)
+        public bool Edit(
+            int id, 
+            string brand, 
+            string model, 
+            string description, 
+            string imageUrl, 
+            int year, 
+            int categoryId,
+            bool isPublic)
         {
             var carData = this.data.Cars.Find(id);
 
@@ -109,6 +124,7 @@
             carData.ImageUrl = imageUrl;
             carData.Year = year;
             carData.CategoryId = categoryId;
+            carData.IsPublic = isPublic;
 
             this.data.SaveChanges();
 
@@ -125,6 +141,15 @@
                 .Cars
                 .Any(c => c.Id == carId && c.DealerId == dealerId);
 
+        public void ChangeVisility(int carId)
+        {
+            var car = this.data.Cars.Find(carId);
+
+            car.IsPublic = !car.IsPublic;
+
+            this.data.SaveChanges();
+        }
+
         public IEnumerable<string> AllBrands()
             => this.data
                 .Cars
@@ -136,11 +161,7 @@
         public IEnumerable<CarCategoryServiceModel> AllCategories()
             => this.data
                 .Categories
-                .Select(c => new CarCategoryServiceModel
-                {
-                    Id = c.Id,
-                    Name = c.Name
-                })
+                .ProjectTo<CarCategoryServiceModel>(this.mapper)
                 .ToList();
 
         public bool CategoryExists(int categoryId)
@@ -148,17 +169,9 @@
                 .Categories
                 .Any(c => c.Id == categoryId);
 
-        private static IEnumerable<CarServiceModel> GetCars(IQueryable<Car> carQuery)
+        private IEnumerable<CarServiceModel> GetCars(IQueryable<Car> carQuery)
             => carQuery
-                .Select(c => new CarServiceModel
-                {
-                    Id = c.Id,
-                    Brand = c.Brand,
-                    Model = c.Model,
-                    Year = c.Year,
-                    ImageUrl = c.ImageUrl,
-                    CategoryName = c.Category.Name
-                })
+                .ProjectTo<CarServiceModel>(this.mapper)
                 .ToList();
     }
 }

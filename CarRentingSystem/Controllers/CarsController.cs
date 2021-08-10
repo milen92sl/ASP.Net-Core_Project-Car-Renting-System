@@ -1,23 +1,29 @@
 ﻿namespace CarRentingSystem.Controllers
 {
-    using CarRentingSystem.Infrastructure;
+    using AutoMapper;
+    using CarRentingSystem.Infrastructure.Extensions;
     using CarRentingSystem.Models.Cars;
     using CarRentingSystem.Services.Cars;
     using CarRentingSystem.Services.Dealers;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
-    
+
+    using static WebConstants;
+
     public class CarsController : Controller
     {
         private readonly ICarService cars;
         private readonly IDealerService dealers;
+        private readonly IMapper mapper;
 
         public CarsController(
-            ICarService cars, 
-            IDealerService dealers)
+            ICarService cars,
+            IDealerService dealers, 
+            IMapper mapper)
         {
             this.cars = cars;
             this.dealers = dealers;
+            this.mapper = mapper;
         }
 
         public IActionResult All([FromQuery] AllCarsQueryModel query)
@@ -37,13 +43,25 @@
 
             return View(query);
         }
-
+        
         [Authorize]
         public IActionResult Mine()
         {
             var myCars = this.cars.ByUser(this.User.Id());
 
             return View(myCars);
+        }
+
+        public IActionResult Details(int id, string information)
+        {
+            var car = this.cars.Details(id);
+
+            if (information != car.GetInformation())
+            {
+                return BadRequest();
+            }
+
+            return View(car);
         }
 
         [Authorize]
@@ -83,7 +101,7 @@
                 return View(car);
             }
 
-            this.cars.Create(
+            var carId = this.cars.Create(
                 car.Brand,
                 car.Model,
                 car.Description,
@@ -92,7 +110,9 @@
                 car.CategoryId,
                 dealerId);
 
-            return RedirectToAction(nameof(All));
+            TempData[GlobalMessageKey] = "You car was added and is awaiting for approval!";
+
+            return RedirectToAction(nameof(Details), new { id = carId, information = car.GetInformation() });
         }
 
         [Authorize]
@@ -112,16 +132,11 @@
                 return Unauthorized();
             }
 
-            return View(new CarFormModel
-            {
-                Brand = car.Brand,
-                Model = car.Model,
-                Description = car.Description,
-                ImageUrl = car.ImageUrl,
-                Year = car.Year,
-                CategoryId = car.CategoryId,
-                Categories = this.cars.AllCategories()
-            });
+            var carForm = this.mapper.Map<CarFormModel>(car);
+
+            carForm.Categories = this.cars.AllCategories();
+
+            return View(carForm);
         }
 
         [HttpPost]
@@ -152,16 +167,24 @@
                 return BadRequest();
             }
 
-            this.cars.Edit(
+            var edited = this.cars.Edit(
                 id,
                 car.Brand,
                 car.Model,
                 car.Description,
                 car.ImageUrl,
                 car.Year,
-                car.CategoryId);
+                car.CategoryId,
+                this.User.IsAdmin());
 
-            return RedirectToAction(nameof(All));
+            if (!edited)
+            {
+                return BadRequest();
+            }
+
+            TempData[GlobalMessageKey] = $"You car was edited{(this.User.IsAdmin() ? string.Empty : " and is awaiting for approval")}!";
+
+            return RedirectToAction(nameof(Details), new { id, information = car.GetInformation() });
         }
     }
 }

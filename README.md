@@ -1,2 +1,1 @@
-# ASP.NET Core Project - Car Renting System - WebSite
-
+# ASP.NET Core Project - Car Renting System
